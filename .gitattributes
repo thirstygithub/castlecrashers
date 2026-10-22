@@ -1,0 +1,7 @@
+*.wasm binary
+*.data binary
+*.pack* binary
+*.pak binary
+*.dds binary
+*.ogg binary
+*.xma binary
