@@ -6,7 +6,7 @@
     for (let tries = 0; ; tries++) {
       try {
         const xhr = new XMLHttpRequest();
-        xhr.open('GET', url, false);
+        xhr.open('GET', tries ? url + (url.includes('?') ? '&' : '?') + 'r=' + tries : url, false);
         xhr.overrideMimeType('text/plain; charset=x-user-defined');
         xhr.send(null);
         if (xhr.status !== 200) throw new Error(url + ': ' + xhr.status);
@@ -14,7 +14,9 @@
         for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
         return bytes;
       } catch (e) {
-        if (tries === 2) throw e;
+        if (tries >= 5) throw e;
+        const until = performance.now() + 400;
+        while (performance.now() < until) {}
       }
     }
   };
@@ -107,11 +109,18 @@
     }
   };
   self.prefetchLazyFiles = async list => {
-    if (/^(localhost|127\.|\[::1\])/.test(location.hostname)) return;
     const rank = p => /\/game\//.test(p) ? 0 : /\/(levels|bsps)\//.test(p) ? 1 : 2;
     const names = Object.keys(list.lazy).sort((a, b) => rank(a) - rank(b) || list.lazy[a] - list.lazy[b]);
     for (const path of names) {
-      try { await (await fetch(urlOf(path), { priority: 'low' })).body.pipeTo(new WritableStream()); } catch {}
+      for (let tries = 0; tries < 4; tries++) {
+        try {
+          const url = urlOf(path) + (tries ? '?r=' + tries : '');
+          await (await fetch(url, { priority: 'low' })).body.pipeTo(new WritableStream());
+          break;
+        } catch {
+          await new Promise(done => setTimeout(done, 500 * (tries + 1)));
+        }
+      }
     }
   };
 })();
